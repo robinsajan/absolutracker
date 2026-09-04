@@ -1,10 +1,17 @@
+import json
+import os
 from contextlib import asynccontextmanager
+from datetime import datetime
+from typing import List
+
+from dotenv import load_dotenv
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy.orm import Session
 from sqlalchemy import func as sql_func
-from typing import List
-from datetime import datetime
+from sqlalchemy.orm import Session
+
+load_dotenv()
+
 
 from database import get_db, init_db, SessionLocal
 from models import Order, CompletedOrder, WaitingItem, TodoItem, Expense, FormulaConfig, Product, FilamentSpool
@@ -69,22 +76,25 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="AbsoluTracker API", lifespan=lifespan)
 
-# CORS — allow Next.js dev server
+# Load CORS origins
+raw_origins = os.getenv("FRONTEND_URL", "*")
+if raw_origins and raw_origins != "*":
+    origins = [o.strip() for o in raw_origins.split(",") if o.strip()]
+    origins.extend(["http://localhost:3000", "http://127.0.0.1:3000"])
+    origins = list(set(origins))
+else:
+    origins = ["*"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-import json
-import os
-from dotenv import load_dotenv
-
-load_dotenv()
-
 # Load users from .env
+
 def get_auth_users() -> dict:
     raw = os.getenv("APP_USERS")
     if raw:
@@ -98,6 +108,7 @@ def get_auth_users() -> dict:
     }
 
 USERS = get_auth_users()
+
 
 STAGE_NAMES = {1: "Designed", 2: "Printed", 3: "Packed", 4: "Delivered", 5: "Payment"}
 
@@ -437,4 +448,6 @@ def delete_filament(spool_id: int, db: Session = Depends(get_db)):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    port = int(os.getenv("PORT", 8000))
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)
+
