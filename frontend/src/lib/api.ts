@@ -1,17 +1,42 @@
-const API = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000").replace(/\/$/, "");
+function getApiBaseUrl(): string {
+  // 1. Explicit env variable
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, "");
+  }
+  // 2. Production fallback if on Railway domain
+  if (typeof window !== "undefined") {
+    const host = window.location.hostname;
+    if (host.includes("railway.app") || host.includes("up.railway.app")) {
+      return "https://absolutracker-production.up.railway.app";
+    }
+  }
+  return "http://localhost:8000";
+}
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-
-  const res = await fetch(`${API}${path}`, {
-    headers: { "Content-Type": "application/json" },
-    ...options,
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ detail: "Request failed" }));
-    throw new Error(err.detail || "Request failed");
+  const baseUrl = getApiBaseUrl();
+  const url = `${baseUrl}${path}`;
+  try {
+    const res = await fetch(url, {
+      headers: { "Content-Type": "application/json" },
+      ...options,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: "Request failed" }));
+      throw new Error(err.detail || `Server returned status ${res.status}`);
+    }
+    return res.json();
+  } catch (err: unknown) {
+    if (err instanceof Error) {
+      if (err.message.includes("Failed to fetch") || err.message.includes("NetworkError")) {
+        throw new Error(`Cannot connect to backend at ${baseUrl}. Please check network connection.`);
+      }
+      throw err;
+    }
+    throw new Error("An unexpected network error occurred");
   }
-  return res.json();
 }
+
 
 // ── Auth ──
 export interface LoginResponse {
