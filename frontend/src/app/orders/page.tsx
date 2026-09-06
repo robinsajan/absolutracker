@@ -44,40 +44,54 @@ export default function OrdersPage() {
   return (
     <>
       <Navbar />
-      <div className="page-container">
-        <div className="page-header">
-          <h1>Orders</h1>
-          <div className="header-actions">
-            <div className="toggle-group">
+      <main className="main-content">
+        <div className="page-container">
+          <div className="page-header">
+            <div>
+              <h1 className="page-title">Active Orders</h1>
+              <p className="page-subtitle">
+                Track production stages from 3D modeling through final payment
+              </p>
+            </div>
+            <div className="header-actions">
+              <div className="toggle-group">
+                <button
+                  type="button"
+                  className={`toggle-btn ${view === "kanban" ? "active" : ""}`}
+                  onClick={() => setView("kanban")}
+                >
+                  Board
+                </button>
+                <button
+                  type="button"
+                  className={`toggle-btn ${view === "table" ? "active" : ""}`}
+                  onClick={() => setView("table")}
+                >
+                  Table
+                </button>
+              </div>
               <button
-                className={`toggle-btn ${view === "kanban" ? "active" : ""}`}
-                onClick={() => setView("kanban")}
+                type="button"
+                className="btn btn-primary"
+                onClick={() => setShowModal(true)}
               >
-                Board
-              </button>
-              <button
-                className={`toggle-btn ${view === "table" ? "active" : ""}`}
-                onClick={() => setView("table")}
-              >
-                Table
+                + New Order
               </button>
             </div>
-            <button className="btn btn-primary" onClick={() => setShowModal(true)}>
-              New Order
-            </button>
           </div>
-        </div>
 
-        {loading ? (
-          <div className="empty-state">
-            <p>Loading orders...</p>
-          </div>
-        ) : view === "kanban" ? (
-          <KanbanView orders={orders} onRefresh={fetchOrders} />
-        ) : (
-          <TableView orders={orders} onRefresh={fetchOrders} />
-        )}
-      </div>
+          {loading ? (
+            <div className="empty-state">
+              <div className="empty-state-icon">◌</div>
+              <div className="empty-state-text">Loading orders...</div>
+            </div>
+          ) : view === "kanban" ? (
+            <KanbanView orders={orders} onRefresh={fetchOrders} />
+          ) : (
+            <TableView orders={orders} onRefresh={fetchOrders} />
+          )}
+        </div>
+      </main>
 
       <OrderModal
         open={showModal}

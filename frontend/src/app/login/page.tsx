@@ -18,10 +18,12 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const res = await login(username, password);
+      const res = await login(username.trim(), password);
       if (res.success) {
         setLogin(res.username);
-        router.replace("/orders");
+        window.location.href = "/dashboard";
+      } else {
+        setError(res.message || "Invalid credentials");
       }
     } catch (err: unknown) {
       if (err instanceof Error) {
@@ -35,91 +37,108 @@ export default function LoginPage() {
   }
 
   return (
-    <div style={{
-      minHeight: "100vh",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      padding: "20px",
-      background: "linear-gradient(135deg, #0a0e1a 0%, #111827 50%, #0f1629 100%)",
-    }}>
-      <div style={{
-        background: "var(--bg-card)",
-        border: "1px solid var(--border)",
-        borderRadius: "var(--radius-xl)",
-        padding: "40px",
-        width: "100%",
-        maxWidth: "400px",
-        boxShadow: "var(--shadow-lg)",
-        animation: "slideUp 400ms ease",
-      }}>
-        {/* Logo */}
-        <div style={{ textAlign: "center", marginBottom: "32px" }}>
-          <div style={{
-            width: "56px",
-            height: "56px",
-            borderRadius: "var(--radius-md)",
-            background: "linear-gradient(135deg, var(--accent), #8b5cf6)",
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: "24px",
-            fontWeight: 700,
-            marginBottom: "16px",
-            boxShadow: "var(--shadow-glow)",
-          }}>
+    <div
+      style={{
+        minHeight: "100dvh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "24px",
+        background: "radial-gradient(circle at 50% 20%, rgba(124, 58, 237, 0.15) 0%, #0a0f1e 70%)",
+      }}
+    >
+      <div
+        className="card"
+        style={{
+          width: "100%",
+          maxWidth: "420px",
+          padding: "36px 32px",
+          borderRadius: "var(--radius-xl)",
+          boxShadow: "0 20px 48px rgba(0, 0, 0, 0.5)",
+          border: "1px solid rgba(255, 255, 255, 0.1)",
+          animation: "slideUp 300ms ease",
+        }}
+      >
+        {/* Brand Header */}
+        <div style={{ textAlign: "center", marginBottom: "28px" }}>
+          <div
+            style={{
+              width: "48px",
+              height: "48px",
+              borderRadius: "var(--radius-lg)",
+              background: "linear-gradient(135deg, var(--primary), #5b21b6)",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "20px",
+              fontWeight: 800,
+              color: "#fff",
+              marginBottom: "14px",
+              boxShadow: "0 8px 24px rgba(124, 58, 237, 0.4)",
+            }}
+          >
             A
           </div>
-          <h1 style={{
-            fontFamily: "'Outfit', sans-serif",
-            fontSize: "26px",
-            fontWeight: 700,
-            marginBottom: "4px",
-          }}>
+          <h1
+            style={{
+              fontFamily: "'Outfit', sans-serif",
+              fontSize: "24px",
+              fontWeight: 700,
+              letterSpacing: "-0.03em",
+              color: "var(--on-surface)",
+              marginBottom: "4px",
+            }}
+          >
             AbsoluTracker
           </h1>
-          <p style={{ color: "var(--text-muted)", fontSize: "14px" }}>
-            Sign in
+          <p style={{ color: "var(--on-surface-muted)", fontSize: "13px" }}>
+            Sales & Operations Intelligence Platform
           </p>
         </div>
 
         {/* Form */}
         <form onSubmit={handleSubmit}>
-          <div className="form-group">
+          <div className="form-group" style={{ marginBottom: "16px" }}>
             <label htmlFor="username">Username</label>
             <input
               id="username"
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="Enter username"
+              placeholder="e.g. robinsajan4"
               autoComplete="username"
               required
+              style={{ padding: "11px 14px", fontSize: "13.5px" }}
             />
           </div>
 
-          <div className="form-group">
+          <div className="form-group" style={{ marginBottom: "20px" }}>
             <label htmlFor="password">Password</label>
             <input
               id="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter password"
+              placeholder="••••••••••••"
               autoComplete="current-password"
               required
+              style={{ padding: "11px 14px", fontSize: "13.5px" }}
             />
           </div>
 
           {error && (
-            <div style={{
-              background: "var(--danger-bg)",
-              color: "var(--danger)",
-              padding: "10px 14px",
-              borderRadius: "var(--radius-sm)",
-              fontSize: "13px",
-              marginBottom: "16px",
-            }}>
+            <div
+              style={{
+                background: "var(--rose-dim)",
+                color: "var(--rose)",
+                border: "1px solid rgba(244, 63, 94, 0.3)",
+                padding: "10px 14px",
+                borderRadius: "var(--radius-md)",
+                fontSize: "12.5px",
+                marginBottom: "18px",
+                fontWeight: 500,
+              }}
+            >
               {error}
             </div>
           )}
@@ -130,15 +149,28 @@ export default function LoginPage() {
             disabled={loading}
             style={{
               width: "100%",
-              justifyContent: "center",
               padding: "12px",
-              fontSize: "15px",
+              fontSize: "14px",
               fontWeight: 600,
+              borderRadius: "var(--radius-md)",
             }}
           >
-            {loading ? "Signing in..." : "Sign In"}
+            {loading ? "Authenticating..." : "Sign In to Operations →"}
           </button>
         </form>
+
+        <div
+          style={{
+            marginTop: "24px",
+            paddingTop: "16px",
+            borderTop: "1px solid var(--outline-light)",
+            textAlign: "center",
+            fontSize: "11px",
+            color: "var(--on-surface-muted)",
+          }}
+        >
+          Protected environment • Multi-stage print farm operations
+        </div>
       </div>
     </div>
   );
