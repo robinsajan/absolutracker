@@ -35,6 +35,7 @@ export default function ExpensesPage() {
   const [submitting, setSubmitting] = useState(false);
 
   // ── Filters & Search ──
+  const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [minAmount, setMinAmount] = useState<number | "">("");
@@ -292,138 +293,184 @@ export default function ExpensesPage() {
           )}
 
           {/* ─────────────────────────────────────────────────────────────
-              COMPREHENSIVE FILTER TOOLBAR (Category, Amount, Date, Sort)
+              COMPREHENSIVE FILTER TOOLBAR (COLLAPSIBLE DROPDOWN PANEL)
           ───────────────────────────────────────────────────────────── */}
-          <div className="card" style={{ marginBottom: "20px" }}>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
-                gap: "12px",
-                alignItems: "flex-end",
-              }}
-            >
-              {/* Search */}
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label>Search Notes/Category</label>
-                <input
-                  placeholder="Type to search..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-              </div>
+          <div style={{ marginBottom: "20px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: showFilterPanel ? "10px" : "0" }}>
+              <button
+                type="button"
+                className={`btn ${showFilterPanel || hasActiveFilters ? "btn-primary" : "btn-outline"} btn-sm`}
+                onClick={() => setShowFilterPanel(!showFilterPanel)}
+                style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
+              >
+                <span>⚙ Filter & Search</span>
+                <span style={{ fontSize: "10px", transition: "transform 200ms ease", transform: showFilterPanel ? "rotate(180deg)" : "rotate(0deg)" }}>
+                  ▼
+                </span>
+                {hasActiveFilters && (
+                  <span
+                    style={{
+                      background: "#fff",
+                      color: "var(--primary)",
+                      borderRadius: "var(--radius-full)",
+                      padding: "1px 6px",
+                      fontSize: "10px",
+                      fontWeight: 800,
+                    }}
+                  >
+                    Active
+                  </span>
+                )}
+              </button>
 
-              {/* Category Filter */}
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label>Category Filter</label>
-                <select
-                  value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(e.target.value)}
-                >
-                  <option value="all">All Categories</option>
-                  {CATEGORIES.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Amount Range Min */}
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label>Min Amount (₹)</label>
-                <input
-                  type="number"
-                  placeholder="Min ₹"
-                  value={minAmount}
-                  onChange={(e) =>
-                    setMinAmount(e.target.value === "" ? "" : parseFloat(e.target.value) || 0)
-                  }
-                />
-              </div>
-
-              {/* Amount Range Max */}
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label>Max Amount (₹)</label>
-                <input
-                  type="number"
-                  placeholder="Max ₹"
-                  value={maxAmount}
-                  onChange={(e) =>
-                    setMaxAmount(e.target.value === "" ? "" : parseFloat(e.target.value) || 0)
-                  }
-                />
-              </div>
-
-              {/* Start Date */}
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label>From Date</label>
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                />
-              </div>
-
-              {/* End Date */}
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label>To Date</label>
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                />
-              </div>
-
-              {/* Sort By */}
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label>Sort By</label>
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as any)}
-                >
-                  <option value="date_desc">Date: Newest First</option>
-                  <option value="date_asc">Date: Oldest First</option>
-                  <option value="amount_desc">Amount: High → Low</option>
-                  <option value="amount_asc">Amount: Low → High</option>
-                </select>
-              </div>
-
-              {/* Reset button */}
-              {hasActiveFilters && (
-                <div style={{ display: "flex", alignItems: "flex-end", height: "100%" }}>
+              {hasActiveFilters && !showFilterPanel && (
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "12px", color: "var(--on-surface-muted)" }}>
+                  <span>
+                    Showing {filteredExpenses.length} of {expenses.length} (₹{totalFiltered.toLocaleString("en-IN")})
+                  </span>
                   <button
                     type="button"
-                    className="btn btn-outline btn-sm"
+                    className="btn btn-ghost btn-sm"
                     onClick={resetFilters}
-                    style={{ width: "100%", height: "38px" }}
+                    style={{ padding: "2px 6px", fontSize: "11px", color: "var(--rose)" }}
                   >
-                    ✕ Reset Filters
+                    ✕ Reset
                   </button>
                 </div>
               )}
             </div>
 
-            {hasActiveFilters && (
-              <div
-                style={{
-                  marginTop: "12px",
-                  paddingTop: "10px",
-                  borderTop: "1px solid var(--outline-light)",
-                  fontSize: "12px",
-                  color: "var(--on-surface-muted)",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
-                <span>
-                  Showing <strong>{filteredExpenses.length}</strong> of{" "}
-                  <strong>{expenses.length}</strong> expenses
-                </span>
-                <span style={{ fontWeight: 600, color: "var(--rose)" }}>
-                  Subtotal: ₹{totalFiltered.toLocaleString("en-IN")}
-                </span>
+            {showFilterPanel && (
+              <div className="card" style={{ animation: "slideUp 200ms ease" }}>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
+                    gap: "12px",
+                    alignItems: "flex-end",
+                  }}
+                >
+                  {/* Search */}
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label>Search Notes/Category</label>
+                    <input
+                      placeholder="Type to search..."
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                    />
+                  </div>
+
+                  {/* Category Filter */}
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label>Category Filter</label>
+                    <select
+                      value={selectedCategory}
+                      onChange={(e) => setSelectedCategory(e.target.value)}
+                    >
+                      <option value="all">All Categories</option>
+                      {CATEGORIES.map((cat) => (
+                        <option key={cat} value={cat}>
+                          {cat}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Amount Range Min */}
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label>Min Amount (₹)</label>
+                    <input
+                      type="number"
+                      placeholder="Min ₹"
+                      value={minAmount}
+                      onChange={(e) =>
+                        setMinAmount(e.target.value === "" ? "" : parseFloat(e.target.value) || 0)
+                      }
+                    />
+                  </div>
+
+                  {/* Amount Range Max */}
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label>Max Amount (₹)</label>
+                    <input
+                      type="number"
+                      placeholder="Max ₹"
+                      value={maxAmount}
+                      onChange={(e) =>
+                        setMaxAmount(e.target.value === "" ? "" : parseFloat(e.target.value) || 0)
+                      }
+                    />
+                  </div>
+
+                  {/* Start Date */}
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label>From Date</label>
+                    <input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                    />
+                  </div>
+
+                  {/* End Date */}
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label>To Date</label>
+                    <input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                    />
+                  </div>
+
+                  {/* Sort By */}
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label>Sort By</label>
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value as any)}
+                    >
+                      <option value="date_desc">Date: Newest First</option>
+                      <option value="date_asc">Date: Oldest First</option>
+                      <option value="amount_desc">Amount: High → Low</option>
+                      <option value="amount_asc">Amount: Low → High</option>
+                    </select>
+                  </div>
+
+                  {/* Reset button */}
+                  {hasActiveFilters && (
+                    <div style={{ display: "flex", alignItems: "flex-end", height: "100%" }}>
+                      <button
+                        type="button"
+                        className="btn btn-outline btn-sm"
+                        onClick={resetFilters}
+                        style={{ width: "100%", height: "38px" }}
+                      >
+                        ✕ Reset Filters
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <div
+                  style={{
+                    marginTop: "12px",
+                    paddingTop: "10px",
+                    borderTop: "1px solid var(--outline-light)",
+                    fontSize: "12px",
+                    color: "var(--on-surface-muted)",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <span>
+                    Showing <strong>{filteredExpenses.length}</strong> of{" "}
+                    <strong>{expenses.length}</strong> expenses
+                  </span>
+                  <span style={{ fontWeight: 600, color: "var(--rose)" }}>
+                    Subtotal: ₹{totalFiltered.toLocaleString("en-IN")}
+                  </span>
+                </div>
               </div>
             )}
           </div>

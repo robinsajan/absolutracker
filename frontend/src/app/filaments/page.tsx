@@ -19,6 +19,7 @@ export default function FilamentsPage() {
   const [loading, setLoading] = useState(true);
 
   // Filters & Search
+  const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [search, setSearch] = useState("");
   const [selectedMaterial, setSelectedMaterial] = useState("all");
   const [lowStockOnly, setLowStockOnly] = useState(false);
@@ -208,89 +209,47 @@ export default function FilamentsPage() {
             </div>
           </div>
 
-          {/* Filter Bar */}
-          <div className="card" style={{ marginBottom: "20px" }}>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
-                gap: "12px",
-                alignItems: "flex-end",
-              }}
-            >
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label>Search Filaments</label>
-                <input
-                  placeholder="Name, color, or material..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-              </div>
-
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label>Filter by Material</label>
-                <select
-                  value={selectedMaterial}
-                  onChange={(e) => setSelectedMaterial(e.target.value)}
-                >
-                  <option value="all">All Materials</option>
-                  {uniqueMaterials.map((mat) => (
-                    <option key={mat} value={mat}>
-                      {mat}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label>Sort By</label>
-                <select value={sortBy} onChange={(e) => setSortBy(e.target.value as any)}>
-                  <option value="name">Name (A → Z)</option>
-                  <option value="remaining_desc">Stock: High → Low</option>
-                  <option value="remaining_asc">Stock: Low → High</option>
-                  <option value="cost_desc">Cost/Kg: High → Low</option>
-                </select>
-              </div>
-
-              {/* Low stock toggle */}
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  height: "38px",
-                  padding: "0 10px",
-                  borderRadius: "var(--radius-md)",
-                  border: "1px solid var(--outline)",
-                  background: lowStockOnly ? "var(--rose-dim)" : "transparent",
-                  cursor: "pointer",
-                }}
-                onClick={() => setLowStockOnly(!lowStockOnly)}
+          {/* ─────────────────────────────────────────────────────────────
+              FILAMENTS FILTER (COLLAPSIBLE DROPDOWN PANEL)
+          ───────────────────────────────────────────────────────────── */}
+          <div style={{ marginBottom: "20px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: showFilterPanel ? "10px" : "0" }}>
+              <button
+                type="button"
+                className={`btn ${showFilterPanel || hasActiveFilters ? "btn-primary" : "btn-outline"} btn-sm`}
+                onClick={() => setShowFilterPanel(!showFilterPanel)}
+                style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
               >
-                <input
-                  type="checkbox"
-                  checked={lowStockOnly}
-                  onChange={(e) => setLowStockOnly(e.target.checked)}
-                  style={{ width: "auto", margin: 0, cursor: "pointer" }}
-                />
-                <span
-                  style={{
-                    fontSize: "12px",
-                    fontWeight: 600,
-                    color: lowStockOnly ? "var(--rose)" : "var(--on-surface)",
-                  }}
-                >
-                  Low Stock Only (&lt;150g)
+                <span>⚙ Filter Filaments</span>
+                <span style={{ fontSize: "10px", transition: "transform 200ms ease", transform: showFilterPanel ? "rotate(180deg)" : "rotate(0deg)" }}>
+                  ▼
                 </span>
-              </div>
+                {hasActiveFilters && (
+                  <span
+                    style={{
+                      background: "#fff",
+                      color: "var(--primary)",
+                      borderRadius: "var(--radius-full)",
+                      padding: "1px 6px",
+                      fontSize: "10px",
+                      fontWeight: 800,
+                    }}
+                  >
+                    Active
+                  </span>
+                )}
+              </button>
 
-              {hasActiveFilters && (
-                <div style={{ display: "flex", alignItems: "flex-end", height: "100%" }}>
+              {hasActiveFilters && !showFilterPanel && (
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "12px", color: "var(--on-surface-muted)" }}>
+                  <span>
+                    Showing {filteredSpools.length} of {spools.length} spools
+                  </span>
                   <button
                     type="button"
-                    className="btn btn-outline btn-sm"
+                    className="btn btn-ghost btn-sm"
                     onClick={resetFilters}
-                    style={{ width: "100%", height: "38px" }}
+                    style={{ padding: "2px 6px", fontSize: "11px", color: "var(--rose)" }}
                   >
                     ✕ Reset
                   </button>
@@ -298,17 +257,107 @@ export default function FilamentsPage() {
               )}
             </div>
 
-            {hasActiveFilters && (
-              <div
-                style={{
-                  marginTop: "12px",
-                  paddingTop: "10px",
-                  borderTop: "1px solid var(--outline-light)",
-                  fontSize: "12px",
-                  color: "var(--on-surface-muted)",
-                }}
-              >
-                Showing <strong>{filteredSpools.length}</strong> of <strong>{spools.length}</strong> spools
+            {showFilterPanel && (
+              <div className="card" style={{ animation: "slideUp 200ms ease" }}>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
+                    gap: "12px",
+                    alignItems: "flex-end",
+                  }}
+                >
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label>Search Filaments</label>
+                    <input
+                      placeholder="Name, color, or material..."
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label>Filter by Material</label>
+                    <select
+                      value={selectedMaterial}
+                      onChange={(e) => setSelectedMaterial(e.target.value)}
+                    >
+                      <option value="all">All Materials</option>
+                      {uniqueMaterials.map((mat) => (
+                        <option key={mat} value={mat}>
+                          {mat}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label>Sort By</label>
+                    <select value={sortBy} onChange={(e) => setSortBy(e.target.value as any)}>
+                      <option value="name">Name (A → Z)</option>
+                      <option value="remaining_desc">Stock: High → Low</option>
+                      <option value="remaining_asc">Stock: Low → High</option>
+                      <option value="cost_desc">Cost/Kg: High → Low</option>
+                    </select>
+                  </div>
+
+                  {/* Low stock toggle */}
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      height: "38px",
+                      padding: "0 10px",
+                      borderRadius: "var(--radius-md)",
+                      border: "1px solid var(--outline)",
+                      background: lowStockOnly ? "var(--rose-dim)" : "transparent",
+                      cursor: "pointer",
+                    }}
+                    onClick={() => setLowStockOnly(!lowStockOnly)}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={lowStockOnly}
+                      onChange={(e) => setLowStockOnly(e.target.checked)}
+                      style={{ width: "auto", margin: 0, cursor: "pointer" }}
+                    />
+                    <span
+                      style={{
+                        fontSize: "12px",
+                        fontWeight: 600,
+                        color: lowStockOnly ? "var(--rose)" : "var(--on-surface)",
+                      }}
+                    >
+                      Low Stock Only (&lt;150g)
+                    </span>
+                  </div>
+
+                  {hasActiveFilters && (
+                    <div style={{ display: "flex", alignItems: "flex-end", height: "100%" }}>
+                      <button
+                        type="button"
+                        className="btn btn-outline btn-sm"
+                        onClick={resetFilters}
+                        style={{ width: "100%", height: "38px" }}
+                      >
+                        ✕ Reset
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <div
+                  style={{
+                    marginTop: "12px",
+                    paddingTop: "10px",
+                    borderTop: "1px solid var(--outline-light)",
+                    fontSize: "12px",
+                    color: "var(--on-surface-muted)",
+                  }}
+                >
+                  Showing <strong>{filteredSpools.length}</strong> of <strong>{spools.length}</strong> spools
+                </div>
               </div>
             )}
           </div>

@@ -19,6 +19,7 @@ export default function OrdersPage() {
   const [loading, setLoading] = useState(true);
 
   // ── Filters & Sorting ──
+  const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [search, setSearch] = useState("");
   const [selectedStage, setSelectedStage] = useState<string>("all");
   const [minPrice, setMinPrice] = useState<number | "">("");
@@ -150,119 +151,46 @@ export default function OrdersPage() {
           </div>
 
           {/* ─────────────────────────────────────────────────────────────
-              MULTI-CRITERIA FILTER BAR (Search, Stage, Amount, Overdue, Sort)
+              MULTI-CRITERIA FILTER BAR (COLLAPSIBLE DROPDOWN PANEL)
           ───────────────────────────────────────────────────────────── */}
-          <div className="card" style={{ marginBottom: "20px" }}>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
-                gap: "12px",
-                alignItems: "flex-end",
-              }}
-            >
-              {/* Search */}
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label>Search Orders</label>
-                <input
-                  placeholder="Customer, item, or phone..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-              </div>
-
-              {/* Stage Dropdown */}
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label>Filter by Stage</label>
-                <select
-                  value={selectedStage}
-                  onChange={(e) => setSelectedStage(e.target.value)}
-                >
-                  <option value="all">All Stages (1-6)</option>
-                  <option value="1">Stage 1: Ordered</option>
-                  <option value="2">Stage 2: Designed</option>
-                  <option value="3">Stage 3: Printed</option>
-                  <option value="4">Stage 4: Packed</option>
-                  <option value="5">Stage 5: Delivered</option>
-                  <option value="6">Stage 6: Payment</option>
-                </select>
-              </div>
-
-              {/* Min Price */}
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label>Min Price (₹)</label>
-                <input
-                  type="number"
-                  placeholder="Min ₹"
-                  value={minPrice}
-                  onChange={(e) =>
-                    setMinPrice(e.target.value === "" ? "" : parseFloat(e.target.value) || 0)
-                  }
-                />
-              </div>
-
-              {/* Max Price */}
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label>Max Price (₹)</label>
-                <input
-                  type="number"
-                  placeholder="Max ₹"
-                  value={maxPrice}
-                  onChange={(e) =>
-                    setMaxPrice(e.target.value === "" ? "" : parseFloat(e.target.value) || 0)
-                  }
-                />
-              </div>
-
-              {/* Sort By */}
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label>Sort By</label>
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as any)}
-                >
-                  <option value="id_desc">Order ID: Newest First</option>
-                  <option value="id_asc">Order ID: Oldest First</option>
-                  <option value="price_desc">Price: Highest First</option>
-                  <option value="price_asc">Price: Lowest First</option>
-                  <option value="deadline">Earliest Deadline</option>
-                </select>
-              </div>
-
-              {/* Overdue Toggle Checkbox */}
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  height: "38px",
-                  padding: "0 10px",
-                  borderRadius: "var(--radius-md)",
-                  border: "1px solid var(--outline)",
-                  background: isOverdueOnly ? "var(--rose-dim)" : "transparent",
-                  cursor: "pointer",
-                }}
-                onClick={() => setIsOverdueOnly(!isOverdueOnly)}
+          <div style={{ marginBottom: "20px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: showFilterPanel ? "10px" : "0" }}>
+              <button
+                type="button"
+                className={`btn ${showFilterPanel || hasActiveFilters ? "btn-primary" : "btn-outline"} btn-sm`}
+                onClick={() => setShowFilterPanel(!showFilterPanel)}
+                style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
               >
-                <input
-                  type="checkbox"
-                  checked={isOverdueOnly}
-                  onChange={(e) => setIsOverdueOnly(e.target.checked)}
-                  style={{ width: "auto", margin: 0, cursor: "pointer" }}
-                />
-                <span style={{ fontSize: "12px", fontWeight: 600, color: isOverdueOnly ? "var(--rose)" : "var(--on-surface)" }}>
-                  Overdue Only
+                <span>⚙ Filter Orders</span>
+                <span style={{ fontSize: "10px", transition: "transform 200ms ease", transform: showFilterPanel ? "rotate(180deg)" : "rotate(0deg)" }}>
+                  ▼
                 </span>
-              </div>
+                {hasActiveFilters && (
+                  <span
+                    style={{
+                      background: "#fff",
+                      color: "var(--primary)",
+                      borderRadius: "var(--radius-full)",
+                      padding: "1px 6px",
+                      fontSize: "10px",
+                      fontWeight: 800,
+                    }}
+                  >
+                    Active
+                  </span>
+                )}
+              </button>
 
-              {/* Reset button */}
-              {hasActiveFilters && (
-                <div style={{ display: "flex", alignItems: "flex-end", height: "100%" }}>
+              {hasActiveFilters && !showFilterPanel && (
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "12px", color: "var(--on-surface-muted)" }}>
+                  <span>
+                    Showing {filteredOrders.length} of {orders.length} (₹{filteredValue.toLocaleString("en-IN")})
+                  </span>
                   <button
                     type="button"
-                    className="btn btn-outline btn-sm"
+                    className="btn btn-ghost btn-sm"
                     onClick={resetFilters}
-                    style={{ width: "100%", height: "38px" }}
+                    style={{ padding: "2px 6px", fontSize: "11px", color: "var(--rose)" }}
                   >
                     ✕ Reset
                   </button>
@@ -270,26 +198,145 @@ export default function OrdersPage() {
               )}
             </div>
 
-            {hasActiveFilters && (
-              <div
-                style={{
-                  marginTop: "12px",
-                  paddingTop: "10px",
-                  borderTop: "1px solid var(--outline-light)",
-                  fontSize: "12px",
-                  color: "var(--on-surface-muted)",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
-                <span>
-                  Showing <strong>{filteredOrders.length}</strong> of{" "}
-                  <strong>{orders.length}</strong> orders
-                </span>
-                <span style={{ fontWeight: 600, color: "var(--primary-light)" }}>
-                  Selected Value: ₹{filteredValue.toLocaleString("en-IN")}
-                </span>
+            {showFilterPanel && (
+              <div className="card" style={{ animation: "slideUp 200ms ease" }}>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
+                    gap: "12px",
+                    alignItems: "flex-end",
+                  }}
+                >
+                  {/* Search */}
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label>Search Orders</label>
+                    <input
+                      placeholder="Customer, item, or phone..."
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                    />
+                  </div>
+
+                  {/* Stage Dropdown */}
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label>Filter by Stage</label>
+                    <select
+                      value={selectedStage}
+                      onChange={(e) => setSelectedStage(e.target.value)}
+                    >
+                      <option value="all">All Stages (1-6)</option>
+                      <option value="1">Stage 1: Ordered</option>
+                      <option value="2">Stage 2: Designed</option>
+                      <option value="3">Stage 3: Printed</option>
+                      <option value="4">Stage 4: Packed</option>
+                      <option value="5">Stage 5: Delivered</option>
+                      <option value="6">Stage 6: Payment</option>
+                    </select>
+                  </div>
+
+                  {/* Min Price */}
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label>Min Price (₹)</label>
+                    <input
+                      type="number"
+                      placeholder="Min ₹"
+                      value={minPrice}
+                      onChange={(e) =>
+                        setMinPrice(e.target.value === "" ? "" : parseFloat(e.target.value) || 0)
+                      }
+                    />
+                  </div>
+
+                  {/* Max Price */}
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label>Max Price (₹)</label>
+                    <input
+                      type="number"
+                      placeholder="Max ₹"
+                      value={maxPrice}
+                      onChange={(e) =>
+                        setMaxPrice(e.target.value === "" ? "" : parseFloat(e.target.value) || 0)
+                      }
+                    />
+                  </div>
+
+                  {/* Sort By */}
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label>Sort By</label>
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value as any)}
+                    >
+                      <option value="id_desc">Order ID: Newest First</option>
+                      <option value="id_asc">Order ID: Oldest First</option>
+                      <option value="price_desc">Price: Highest First</option>
+                      <option value="price_asc">Price: Lowest First</option>
+                      <option value="deadline">Earliest Deadline</option>
+                    </select>
+                  </div>
+
+                  {/* Overdue Toggle Checkbox */}
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      height: "38px",
+                      padding: "0 10px",
+                      borderRadius: "var(--radius-md)",
+                      border: "1px solid var(--outline)",
+                      background: isOverdueOnly ? "var(--rose-dim)" : "transparent",
+                      cursor: "pointer",
+                    }}
+                    onClick={() => setIsOverdueOnly(!isOverdueOnly)}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isOverdueOnly}
+                      onChange={(e) => setIsOverdueOnly(e.target.checked)}
+                      style={{ width: "auto", margin: 0, cursor: "pointer" }}
+                    />
+                    <span style={{ fontSize: "12px", fontWeight: 600, color: isOverdueOnly ? "var(--rose)" : "var(--on-surface)" }}>
+                      Overdue Only
+                    </span>
+                  </div>
+
+                  {/* Reset button */}
+                  {hasActiveFilters && (
+                    <div style={{ display: "flex", alignItems: "flex-end", height: "100%" }}>
+                      <button
+                        type="button"
+                        className="btn btn-outline btn-sm"
+                        onClick={resetFilters}
+                        style={{ width: "100%", height: "38px" }}
+                      >
+                        ✕ Reset
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <div
+                  style={{
+                    marginTop: "12px",
+                    paddingTop: "10px",
+                    borderTop: "1px solid var(--outline-light)",
+                    fontSize: "12px",
+                    color: "var(--on-surface-muted)",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <span>
+                    Showing <strong>{filteredOrders.length}</strong> of{" "}
+                    <strong>{orders.length}</strong> orders
+                  </span>
+                  <span style={{ fontWeight: 600, color: "var(--primary-light)" }}>
+                    Selected Value: ₹{filteredValue.toLocaleString("en-IN")}
+                  </span>
+                </div>
               </div>
             )}
           </div>

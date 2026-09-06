@@ -12,6 +12,7 @@ export default function CompletedPage() {
   const [loading, setLoading] = useState(true);
 
   // ── Filters & Sorting ──
+  const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [search, setSearch] = useState("");
   const [minPrice, setMinPrice] = useState<number | "">("");
   const [maxPrice, setMaxPrice] = useState<number | "">("");
@@ -110,80 +111,47 @@ export default function CompletedPage() {
             </div>
           </div>
 
-          {/* Filter Bar */}
-          <div className="card" style={{ marginBottom: "20px" }}>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
-                gap: "12px",
-                alignItems: "flex-end",
-              }}
-            >
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label>Search Archive</label>
-                <input
-                  placeholder="Customer, item, or ID..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-              </div>
+          {/* ─────────────────────────────────────────────────────────────
+              COMPLETED ORDERS FILTER (COLLAPSIBLE DROPDOWN PANEL)
+          ───────────────────────────────────────────────────────────── */}
+          <div style={{ marginBottom: "20px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: showFilterPanel ? "10px" : "0" }}>
+              <button
+                type="button"
+                className={`btn ${showFilterPanel || hasActiveFilters ? "btn-primary" : "btn-outline"} btn-sm`}
+                onClick={() => setShowFilterPanel(!showFilterPanel)}
+                style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
+              >
+                <span>⚙ Filter Archive</span>
+                <span style={{ fontSize: "10px", transition: "transform 200ms ease", transform: showFilterPanel ? "rotate(180deg)" : "rotate(0deg)" }}>
+                  ▼
+                </span>
+                {hasActiveFilters && (
+                  <span
+                    style={{
+                      background: "#fff",
+                      color: "var(--primary)",
+                      borderRadius: "var(--radius-full)",
+                      padding: "1px 6px",
+                      fontSize: "10px",
+                      fontWeight: 800,
+                    }}
+                  >
+                    Active
+                  </span>
+                )}
+              </button>
 
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label>Min Amount (₹)</label>
-                <input
-                  type="number"
-                  placeholder="Min ₹"
-                  value={minPrice}
-                  onChange={(e) => setMinPrice(e.target.value === "" ? "" : parseFloat(e.target.value) || 0)}
-                />
-              </div>
-
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label>Max Amount (₹)</label>
-                <input
-                  type="number"
-                  placeholder="Max ₹"
-                  value={maxPrice}
-                  onChange={(e) => setMaxPrice(e.target.value === "" ? "" : parseFloat(e.target.value) || 0)}
-                />
-              </div>
-
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label>Delivered From</label>
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                />
-              </div>
-
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label>Delivered To</label>
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                />
-              </div>
-
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label>Sort By</label>
-                <select value={sortBy} onChange={(e) => setSortBy(e.target.value as any)}>
-                  <option value="completed_desc">Completion: Newest First</option>
-                  <option value="completed_asc">Completion: Oldest First</option>
-                  <option value="price_desc">Amount: Highest First</option>
-                  <option value="price_asc">Amount: Lowest First</option>
-                </select>
-              </div>
-
-              {hasActiveFilters && (
-                <div style={{ display: "flex", alignItems: "flex-end", height: "100%" }}>
+              {hasActiveFilters && !showFilterPanel && (
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "12px", color: "var(--on-surface-muted)" }}>
+                  <span>
+                    Showing {filteredOrders.length} of {orders.length} (₹{totalRevenue.toLocaleString("en-IN")})
+                  </span>
                   <button
                     type="button"
-                    className="btn btn-outline btn-sm"
+                    className="btn btn-ghost btn-sm"
                     onClick={resetFilters}
-                    style={{ width: "100%", height: "38px" }}
+                    style={{ padding: "2px 6px", fontSize: "11px", color: "var(--rose)" }}
                   >
                     ✕ Reset
                   </button>
@@ -191,25 +159,106 @@ export default function CompletedPage() {
               )}
             </div>
 
-            {hasActiveFilters && (
-              <div
-                style={{
-                  marginTop: "12px",
-                  paddingTop: "10px",
-                  borderTop: "1px solid var(--outline-light)",
-                  fontSize: "12px",
-                  color: "var(--on-surface-muted)",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
-                <span>
-                  Showing <strong>{filteredOrders.length}</strong> of <strong>{orders.length}</strong> completed orders
-                </span>
-                <span style={{ fontWeight: 600, color: "var(--emerald)" }}>
-                  Subtotal: ₹{totalRevenue.toLocaleString("en-IN")}
-                </span>
+            {showFilterPanel && (
+              <div className="card" style={{ animation: "slideUp 200ms ease" }}>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
+                    gap: "12px",
+                    alignItems: "flex-end",
+                  }}
+                >
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label>Search Archive</label>
+                    <input
+                      placeholder="Customer, item, or ID..."
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label>Min Amount (₹)</label>
+                    <input
+                      type="number"
+                      placeholder="Min ₹"
+                      value={minPrice}
+                      onChange={(e) => setMinPrice(e.target.value === "" ? "" : parseFloat(e.target.value) || 0)}
+                    />
+                  </div>
+
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label>Max Amount (₹)</label>
+                    <input
+                      type="number"
+                      placeholder="Max ₹"
+                      value={maxPrice}
+                      onChange={(e) => setMaxPrice(e.target.value === "" ? "" : parseFloat(e.target.value) || 0)}
+                    />
+                  </div>
+
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label>Delivered From</label>
+                    <input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label>Delivered To</label>
+                    <input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label>Sort By</label>
+                    <select value={sortBy} onChange={(e) => setSortBy(e.target.value as any)}>
+                      <option value="completed_desc">Completion: Newest First</option>
+                      <option value="completed_asc">Completion: Oldest First</option>
+                      <option value="price_desc">Amount: Highest First</option>
+                      <option value="price_asc">Amount: Lowest First</option>
+                    </select>
+                  </div>
+
+                  {hasActiveFilters && (
+                    <div style={{ display: "flex", alignItems: "flex-end", height: "100%" }}>
+                      <button
+                        type="button"
+                        className="btn btn-outline btn-sm"
+                        onClick={resetFilters}
+                        style={{ width: "100%", height: "38px" }}
+                      >
+                        ✕ Reset
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <div
+                  style={{
+                    marginTop: "12px",
+                    paddingTop: "10px",
+                    borderTop: "1px solid var(--outline-light)",
+                    fontSize: "12px",
+                    color: "var(--on-surface-muted)",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <span>
+                    Showing <strong>{filteredOrders.length}</strong> of <strong>{orders.length}</strong> completed orders
+                  </span>
+                  <span style={{ fontWeight: 600, color: "var(--emerald)" }}>
+                    Subtotal: ₹{totalRevenue.toLocaleString("en-IN")}
+                  </span>
+                </div>
               </div>
             )}
           </div>
