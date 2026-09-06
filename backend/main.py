@@ -45,31 +45,8 @@ async def lifespan(app: FastAPI):
             db.add_all(defaults)
             db.commit()
 
-        if db.query(FilamentSpool).count() == 0:
-            filament_defaults = [
-                FilamentSpool(name="Bambu Matte Black", material="PLA", color_name="Black", color_hex="#18181b", remaining_grams=850.0, total_grams=1000.0, cost_per_kg=1200.0),
-                FilamentSpool(name="eSUN PLA+ Crimson Red", material="PLA+", color_name="Red", color_hex="#ef4444", remaining_grams=920.0, total_grams=1000.0, cost_per_kg=1350.0),
-                FilamentSpool(name="Polymaker High-Speed White", material="PLA", color_name="White", color_hex="#f8fafc", remaining_grams=450.0, total_grams=1000.0, cost_per_kg=1100.0),
-                FilamentSpool(name="Sunlu PETG Clear Blue", material="PETG", color_name="Blue", color_hex="#3b82f6", remaining_grams=700.0, total_grams=1000.0, cost_per_kg=1450.0),
-            ]
-            db.add_all(filament_defaults)
-
-            # Log default spools as expenses if no filament expenses exist
-            if db.query(Expense).filter(Expense.category == "Filament / Materials").count() == 0:
-                today_str = datetime.now().strftime("%Y-%m-%d")
-                for s in filament_defaults:
-                    cost = round((s.total_grams / 1000.0) * s.cost_per_kg, 2)
-                    exp = Expense(
-                        amount=cost,
-                        category="Filament / Materials",
-                        date=today_str,
-                        notes=f"Spool Purchase: {s.name} ({s.material}, {s.color_name}, {s.total_grams}g)",
-                    )
-                    db.add(exp)
-
-            db.commit()
     except Exception as e:
-        print("Error seeding initial data:", e)
+        print("Error initializing data:", e)
     finally:
         db.close()
     yield

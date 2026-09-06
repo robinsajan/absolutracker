@@ -23,11 +23,11 @@ export default function FilamentsPage() {
   const [newForm, setNewForm] = useState<FilamentCreate>({
     name: "",
     material: "PLA",
-    color_name: "Black",
-    color_hex: "#18181b",
+    color_name: "",
+    color_hex: "#7c3aed",
     remaining_grams: 1000,
     total_grams: 1000,
-    cost_per_kg: 1200,
+    cost_per_kg: 0,
   });
 
   // Deduct Modal State
@@ -63,11 +63,11 @@ export default function FilamentsPage() {
       setNewForm({
         name: "",
         material: "PLA",
-        color_name: "Black",
-        color_hex: "#18181b",
+        color_name: "",
+        color_hex: "#7c3aed",
         remaining_grams: 1000,
         total_grams: 1000,
-        cost_per_kg: 1200,
+        cost_per_kg: 0,
       });
       fetchSpools();
     } catch (err) {
