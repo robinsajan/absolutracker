@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { isLoggedIn } from "@/lib/auth";
 import { getProducts, createProduct, deleteProduct, Product } from "@/lib/api";
@@ -10,12 +10,17 @@ export default function ProductsPage() {
   const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
   const [showAddForm, setShowAddForm] = useState(false);
   const [name, setName] = useState("");
   const [price, setPrice] = useState<number | "">("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+
+  // ── Filters & Sort ──
+  const [search, setSearch] = useState("");
+  const [minPrice, setMinPrice] = useState<number | "">("");
+  const [maxPrice, setMaxPrice] = useState<number | "">("");
+  const [sortBy, setSortBy] = useState<"name_asc" | "name_desc" | "price_desc" | "price_asc">("name_asc");
 
   const fetchProductsList = useCallback(async () => {
     try {
@@ -68,104 +73,258 @@ export default function ProductsPage() {
     }
   }
 
-  const filtered = search.trim()
-    ? products.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()))
-    : products;
+  const filteredProducts = useMemo(() => {
+    return products
+      .filter((p) => {
+        if (search.trim() && !p.name.toLowerCase().includes(search.toLowerCase())) {
+          return false;
+        }
+        if (minPrice !== "" && p.price < minPrice) return false;
+        if (maxPrice !== "" && p.price > maxPrice) return false;
+        return true;
+      })
+      .sort((a, b) => {
+        if (sortBy === "name_asc") return a.name.localeCompare(b.name);
+        if (sortBy === "name_desc") return b.name.localeCompare(a.name);
+        if (sortBy === "price_desc") return b.price - a.price;
+        if (sortBy === "price_asc") return a.price - b.price;
+        return 0;
+      });
+  }, [products, search, minPrice, maxPrice, sortBy]);
+
+  function resetFilters() {
+    setSearch("");
+    setMinPrice("");
+    setMaxPrice("");
+    setSortBy("name_asc");
+  }
+
+  const hasActiveFilters = search || minPrice !== "" || maxPrice !== "" || sortBy !== "name_asc";
 
   return (
     <>
       <Navbar />
-      <div className="page-container">
-        <div className="page-header">
-          <h1>Products</h1>
-          <button className="btn btn-primary" onClick={() => setShowAddForm(!showAddForm)}>
-            {showAddForm ? "Cancel" : "Add Product"}
-          </button>
-        </div>
+      <main className="main-content">
+        <div className="page-container">
+          <div className="page-header">
+            <div>
+              <h1 className="page-title">Catalog & Standard Products</h1>
+              <p className="page-subtitle">Manage base 3D printed inventory, default rates, and descriptions</p>
+            </div>
+            <div className="header-actions">
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => setShowAddForm(!showAddForm)}
+              >
+                {showAddForm ? "Cancel" : "+ Add Product"}
+              </button>
+            </div>
+          </div>
 
-        {showAddForm && (
-          <div className="card" style={{ marginBottom: "16px" }}>
-            <form onSubmit={handleAddProduct}>
-              <div className="form-grid">
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label htmlFor="prod_name">Name</label>
-                  <input
-                    id="prod_name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label htmlFor="prod_price">Price (₹)</label>
-                  <input
-                    id="prod_price"
-                    type="number"
-                    min={0}
-                    step={1}
-                    value={price}
-                    onChange={(e) => setPrice(e.target.value === "" ? "" : parseFloat(e.target.value) || 0)}
-                    required
-                  />
-                </div>
-              </div>
-              {error && (
-                <div style={{ color: "var(--danger)", fontSize: "13px", marginTop: "10px" }}>
-                  {error}
-                </div>
-              )}
-              <div style={{ marginTop: "12px" }}>
-                <button type="submit" className="btn btn-primary" disabled={submitting}>
-                  {submitting ? "Saving..." : "Save"}
+          {/* New Product Form */}
+          {showAddForm && (
+            <div className="card" style={{ marginBottom: "20px", animation: "slideUp 300ms ease" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
+                <h2 style={{ fontSize: "15px", fontWeight: 700 }}>Add Catalog Product</h2>
+                <button
+                  type="button"
+                  onClick={() => setShowAddForm(false)}
+                  className="btn btn-outline btn-sm"
+                >
+                  Close
                 </button>
               </div>
-            </form>
-          </div>
-        )}
 
-        <input
-          placeholder="Search"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          style={{ maxWidth: "280px", marginBottom: "16px" }}
-        />
+              <form onSubmit={handleAddProduct}>
+                <div className="form-grid">
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label htmlFor="prod_name">Product Name</label>
+                    <input
+                      id="prod_name"
+                      placeholder="e.g. Phone Stand / Desk Holder"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label htmlFor="prod_price">Default Price (₹)</label>
+                    <input
+                      id="prod_price"
+                      type="number"
+                      min={0}
+                      step={1}
+                      placeholder="e.g. 350"
+                      value={price}
+                      onChange={(e) =>
+                        setPrice(e.target.value === "" ? "" : parseFloat(e.target.value) || 0)
+                      }
+                      required
+                    />
+                  </div>
+                </div>
+                {error && (
+                  <div style={{ color: "var(--rose)", fontSize: "13px", marginTop: "10px" }}>
+                    {error}
+                  </div>
+                )}
+                <div className="form-actions">
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    onClick={() => setShowAddForm(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button type="submit" className="btn btn-primary" disabled={submitting}>
+                    {submitting ? "Saving..." : "Save Product"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
 
-        {loading ? (
-          <div className="empty-state"><p>Loading...</p></div>
-        ) : filtered.length === 0 ? (
-          <div className="empty-state">
-            <p>{search ? "No matching products" : "No products yet"}</p>
+          {/* Filter Bar */}
+          <div className="card" style={{ marginBottom: "20px" }}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
+                gap: "12px",
+                alignItems: "flex-end",
+              }}
+            >
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label>Search Products</label>
+                <input
+                  placeholder="Filter by name..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
+
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label>Min Price (₹)</label>
+                <input
+                  type="number"
+                  placeholder="Min ₹"
+                  value={minPrice}
+                  onChange={(e) =>
+                    setMinPrice(e.target.value === "" ? "" : parseFloat(e.target.value) || 0)
+                  }
+                />
+              </div>
+
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label>Max Price (₹)</label>
+                <input
+                  type="number"
+                  placeholder="Max ₹"
+                  value={maxPrice}
+                  onChange={(e) =>
+                    setMaxPrice(e.target.value === "" ? "" : parseFloat(e.target.value) || 0)
+                  }
+                />
+              </div>
+
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label>Sort By</label>
+                <select value={sortBy} onChange={(e) => setSortBy(e.target.value as any)}>
+                  <option value="name_asc">Name: A → Z</option>
+                  <option value="name_desc">Name: Z → A</option>
+                  <option value="price_desc">Price: High → Low</option>
+                  <option value="price_asc">Price: Low → High</option>
+                </select>
+              </div>
+
+              {hasActiveFilters && (
+                <div style={{ display: "flex", alignItems: "flex-end", height: "100%" }}>
+                  <button
+                    type="button"
+                    className="btn btn-outline btn-sm"
+                    onClick={resetFilters}
+                    style={{ width: "100%", height: "38px" }}
+                  >
+                    ✕ Reset
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {hasActiveFilters && (
+              <div
+                style={{
+                  marginTop: "12px",
+                  paddingTop: "10px",
+                  borderTop: "1px solid var(--outline-light)",
+                  fontSize: "12px",
+                  color: "var(--on-surface-muted)",
+                }}
+              >
+                Showing <strong>{filteredProducts.length}</strong> of <strong>{products.length}</strong> products
+              </div>
+            )}
           </div>
-        ) : (
-          <div className="table-wrap">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Price</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((prod) => (
-                  <tr key={prod.id}>
-                    <td style={{ fontWeight: 600 }}>{prod.name}</td>
-                    <td>₹{prod.price.toLocaleString()}</td>
-                    <td>
-                      <button
-                        className="btn btn-outline btn-sm"
-                        onClick={() => handleDelete(prod.id, prod.name)}
-                      >
-                        Delete
-                      </button>
-                    </td>
+
+          {/* Table */}
+          {loading ? (
+            <div className="empty-state">
+              <div className="empty-state-icon">◌</div>
+              <div className="empty-state-text">Loading catalog...</div>
+            </div>
+          ) : filteredProducts.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-state-icon">❐</div>
+              <div className="empty-state-text">
+                {hasActiveFilters ? "No products match the selected filters" : "No products added yet"}
+              </div>
+            </div>
+          ) : (
+            <div className="table-wrap">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Product Name</th>
+                    <th style={{ textAlign: "right" }}>Base Price</th>
+                    <th style={{ textAlign: "right" }}>Action</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+                </thead>
+                <tbody>
+                  {filteredProducts.map((p) => (
+                    <tr key={p.id}>
+                      <td style={{ fontWeight: 600, color: "var(--on-surface-muted)" }}>#{p.id}</td>
+                      <td style={{ fontWeight: 600, color: "var(--on-surface)" }}>{p.name}</td>
+                      <td
+                        style={{
+                          textAlign: "right",
+                          fontWeight: 700,
+                          fontSize: "13.5px",
+                          color: "var(--primary-light)",
+                        }}
+                      >
+                        ₹{p.price.toLocaleString("en-IN")}
+                      </td>
+                      <td style={{ textAlign: "right" }}>
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-sm"
+                          onClick={() => handleDelete(p.id, p.name)}
+                          style={{ color: "var(--rose)" }}
+                          title="Delete product"
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </main>
     </>
   );
 }

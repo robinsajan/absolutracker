@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { isLoggedIn } from "@/lib/auth";
 import { getOrders, Order } from "@/lib/api";
@@ -17,6 +17,14 @@ export default function OrdersPage() {
   const [view, setView] = useState<ViewMode>("kanban");
   const [showModal, setShowModal] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  // ── Filters & Sorting ──
+  const [search, setSearch] = useState("");
+  const [selectedStage, setSelectedStage] = useState<string>("all");
+  const [minPrice, setMinPrice] = useState<number | "">("");
+  const [maxPrice, setMaxPrice] = useState<number | "">("");
+  const [isOverdueOnly, setIsOverdueOnly] = useState(false);
+  const [sortBy, setSortBy] = useState<"id_desc" | "id_asc" | "price_desc" | "price_asc" | "deadline">("id_desc");
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -41,16 +49,77 @@ export default function OrdersPage() {
     setOrders((prev) => [order, ...prev]);
   }
 
+  // Filtered and Sorted Orders
+  const filteredOrders = useMemo(() => {
+    const todayStr = new Date().toISOString().split("T")[0];
+
+    return orders
+      .filter((o) => {
+        // Text Search across customer name, item desc, or phone
+        if (search.trim()) {
+          const q = search.toLowerCase();
+          const matchCustomer = o.customer_name?.toLowerCase().includes(q);
+          const matchItem = o.item_desc?.toLowerCase().includes(q);
+          const matchPhone = o.phone?.toLowerCase().includes(q);
+          const matchId = String(o.id).includes(q);
+          if (!matchCustomer && !matchItem && !matchPhone && !matchId) return false;
+        }
+
+        // Stage filter
+        if (selectedStage !== "all" && String(o.stage) !== selectedStage) {
+          return false;
+        }
+
+        // Price range filter
+        if (minPrice !== "" && o.price < minPrice) return false;
+        if (maxPrice !== "" && o.price > maxPrice) return false;
+
+        // Overdue filter
+        if (isOverdueOnly) {
+          if (!o.deadline || o.deadline >= todayStr) return false;
+        }
+
+        return true;
+      })
+      .sort((a, b) => {
+        if (sortBy === "id_desc") return b.id - a.id;
+        if (sortBy === "id_asc") return a.id - b.id;
+        if (sortBy === "price_desc") return (b.price || 0) - (a.price || 0);
+        if (sortBy === "price_asc") return (a.price || 0) - (b.price || 0);
+        if (sortBy === "deadline") {
+          if (!a.deadline) return 1;
+          if (!b.deadline) return -1;
+          return a.deadline.localeCompare(b.deadline);
+        }
+        return 0;
+      });
+  }, [orders, search, selectedStage, minPrice, maxPrice, isOverdueOnly, sortBy]);
+
+  const hasActiveFilters =
+    search || selectedStage !== "all" || minPrice !== "" || maxPrice !== "" || isOverdueOnly || sortBy !== "id_desc";
+
+  function resetFilters() {
+    setSearch("");
+    setSelectedStage("all");
+    setMinPrice("");
+    setMaxPrice("");
+    setIsOverdueOnly(false);
+    setSortBy("id_desc");
+  }
+
+  const filteredValue = filteredOrders.reduce((sum, o) => sum + (o.price || 0), 0);
+
   return (
     <>
       <Navbar />
       <main className="main-content">
         <div className="page-container">
+          {/* Header */}
           <div className="page-header">
             <div>
               <h1 className="page-title">Active Orders</h1>
               <p className="page-subtitle">
-                Track production stages from 3D modeling through final payment
+                Filter and track live production through all stages
               </p>
             </div>
             <div className="header-actions">
@@ -80,15 +149,178 @@ export default function OrdersPage() {
             </div>
           </div>
 
+          {/* ─────────────────────────────────────────────────────────────
+              MULTI-CRITERIA FILTER BAR (Search, Stage, Amount, Overdue, Sort)
+          ───────────────────────────────────────────────────────────── */}
+          <div className="card" style={{ marginBottom: "20px" }}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
+                gap: "12px",
+                alignItems: "flex-end",
+              }}
+            >
+              {/* Search */}
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label>Search Orders</label>
+                <input
+                  placeholder="Customer, item, or phone..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
+
+              {/* Stage Dropdown */}
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label>Filter by Stage</label>
+                <select
+                  value={selectedStage}
+                  onChange={(e) => setSelectedStage(e.target.value)}
+                >
+                  <option value="all">All Stages (1-6)</option>
+                  <option value="1">Stage 1: Ordered</option>
+                  <option value="2">Stage 2: Designed</option>
+                  <option value="3">Stage 3: Printed</option>
+                  <option value="4">Stage 4: Packed</option>
+                  <option value="5">Stage 5: Delivered</option>
+                  <option value="6">Stage 6: Payment</option>
+                </select>
+              </div>
+
+              {/* Min Price */}
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label>Min Price (₹)</label>
+                <input
+                  type="number"
+                  placeholder="Min ₹"
+                  value={minPrice}
+                  onChange={(e) =>
+                    setMinPrice(e.target.value === "" ? "" : parseFloat(e.target.value) || 0)
+                  }
+                />
+              </div>
+
+              {/* Max Price */}
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label>Max Price (₹)</label>
+                <input
+                  type="number"
+                  placeholder="Max ₹"
+                  value={maxPrice}
+                  onChange={(e) =>
+                    setMaxPrice(e.target.value === "" ? "" : parseFloat(e.target.value) || 0)
+                  }
+                />
+              </div>
+
+              {/* Sort By */}
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label>Sort By</label>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as any)}
+                >
+                  <option value="id_desc">Order ID: Newest First</option>
+                  <option value="id_asc">Order ID: Oldest First</option>
+                  <option value="price_desc">Price: Highest First</option>
+                  <option value="price_asc">Price: Lowest First</option>
+                  <option value="deadline">Earliest Deadline</option>
+                </select>
+              </div>
+
+              {/* Overdue Toggle Checkbox */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  height: "38px",
+                  padding: "0 10px",
+                  borderRadius: "var(--radius-md)",
+                  border: "1px solid var(--outline)",
+                  background: isOverdueOnly ? "var(--rose-dim)" : "transparent",
+                  cursor: "pointer",
+                }}
+                onClick={() => setIsOverdueOnly(!isOverdueOnly)}
+              >
+                <input
+                  type="checkbox"
+                  checked={isOverdueOnly}
+                  onChange={(e) => setIsOverdueOnly(e.target.checked)}
+                  style={{ width: "auto", margin: 0, cursor: "pointer" }}
+                />
+                <span style={{ fontSize: "12px", fontWeight: 600, color: isOverdueOnly ? "var(--rose)" : "var(--on-surface)" }}>
+                  Overdue Only
+                </span>
+              </div>
+
+              {/* Reset button */}
+              {hasActiveFilters && (
+                <div style={{ display: "flex", alignItems: "flex-end", height: "100%" }}>
+                  <button
+                    type="button"
+                    className="btn btn-outline btn-sm"
+                    onClick={resetFilters}
+                    style={{ width: "100%", height: "38px" }}
+                  >
+                    ✕ Reset
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {hasActiveFilters && (
+              <div
+                style={{
+                  marginTop: "12px",
+                  paddingTop: "10px",
+                  borderTop: "1px solid var(--outline-light)",
+                  fontSize: "12px",
+                  color: "var(--on-surface-muted)",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <span>
+                  Showing <strong>{filteredOrders.length}</strong> of{" "}
+                  <strong>{orders.length}</strong> orders
+                </span>
+                <span style={{ fontWeight: 600, color: "var(--primary-light)" }}>
+                  Selected Value: ₹{filteredValue.toLocaleString("en-IN")}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Body Content */}
           {loading ? (
             <div className="empty-state">
               <div className="empty-state-icon">◌</div>
               <div className="empty-state-text">Loading orders...</div>
             </div>
+          ) : filteredOrders.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-state-icon">⊡</div>
+              <div className="empty-state-text">
+                {hasActiveFilters ? "No orders match the selected filters" : "No active orders found"}
+              </div>
+              {hasActiveFilters && (
+                <button
+                  type="button"
+                  className="btn btn-outline btn-sm"
+                  onClick={resetFilters}
+                  style={{ marginTop: "12px" }}
+                >
+                  Clear Filters
+                </button>
+              )}
+            </div>
           ) : view === "kanban" ? (
-            <KanbanView orders={orders} onRefresh={fetchOrders} />
+            <KanbanView orders={filteredOrders} onRefresh={fetchOrders} />
           ) : (
-            <TableView orders={orders} onRefresh={fetchOrders} />
+            <TableView orders={filteredOrders} onRefresh={fetchOrders} />
           )}
         </div>
       </main>
