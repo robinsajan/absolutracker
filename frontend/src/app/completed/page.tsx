@@ -3,13 +3,18 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { isLoggedIn } from "@/lib/auth";
-import { getCompleted, CompletedOrder } from "@/lib/api";
+import { getCompleted, updateCompletedOrder, deleteCompletedOrder, CompletedOrder, CompletedOrderUpdate } from "@/lib/api";
 import Navbar from "@/components/Navbar";
 
 export default function CompletedPage() {
   const router = useRouter();
   const [orders, setOrders] = useState<CompletedOrder[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // ── Edit State ──
+  const [editingOrder, setEditingOrder] = useState<CompletedOrder | null>(null);
+  const [editForm, setEditForm] = useState<CompletedOrderUpdate>({});
+  const [editSubmitting, setEditSubmitting] = useState(false);
 
   // ── Filters & Sorting ──
   const [showFilterPanel, setShowFilterPanel] = useState(false);
@@ -38,6 +43,43 @@ export default function CompletedPage() {
     }
     fetchCompleted();
   }, [router, fetchCompleted]);
+
+  function startEdit(order: CompletedOrder) {
+    setEditingOrder(order);
+    setEditForm({
+      customer_name: order.customer_name,
+      phone: order.phone,
+      item_desc: order.item_desc,
+      qty: order.qty,
+      price: order.price,
+      payment_status: order.payment_status || "Settled",
+    });
+  }
+
+  async function handleEditSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingOrder) return;
+    setEditSubmitting(true);
+    try {
+      const updated = await updateCompletedOrder(editingOrder.id, editForm);
+      setOrders((prev) => prev.map((o) => (o.id === updated.id ? updated : o)));
+      setEditingOrder(null);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to update completed order");
+    } finally {
+      setEditSubmitting(false);
+    }
+  }
+
+  async function handleDelete(id: number) {
+    if (!confirm("Delete this completed order record?")) return;
+    try {
+      await deleteCompletedOrder(id);
+      setOrders((prev) => prev.filter((o) => o.id !== id));
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to delete completed order");
+    }
+  }
 
   const filteredOrders = useMemo(() => {
     return orders
@@ -288,6 +330,7 @@ export default function CompletedPage() {
                     <th>Amount</th>
                     <th>Status</th>
                     <th>Completed At</th>
+                    <th style={{ textAlign: "right" }}>Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -306,6 +349,26 @@ export default function CompletedPage() {
                       <td style={{ color: "var(--on-surface-muted)", fontSize: "12px", whiteSpace: "nowrap" }}>
                         {order.completed_at ? new Date(order.completed_at).toLocaleDateString() : "—"}
                       </td>
+                      <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-sm"
+                          onClick={() => startEdit(order)}
+                          style={{ color: "var(--primary)", marginRight: "6px" }}
+                          title="Edit completed order"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-sm"
+                          onClick={() => handleDelete(order.id)}
+                          style={{ color: "var(--rose)" }}
+                          title="Delete completed order"
+                        >
+                          Delete
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -314,6 +377,138 @@ export default function CompletedPage() {
           )}
         </div>
       </main>
+
+      {/* Edit Completed Order Modal */}
+      {editingOrder && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0, 0, 0, 0.65)",
+            backdropFilter: "blur(6px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            padding: "16px",
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setEditingOrder(null);
+          }}
+        >
+          <div
+            className="card"
+            style={{
+              width: "100%",
+              maxWidth: "500px",
+              boxShadow: "0 20px 40px rgba(0,0,0,0.4)",
+              border: "1px solid var(--outline-light)",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: "20px",
+              }}
+            >
+              <h2 style={{ fontSize: "17px", fontWeight: 700 }}>Edit Completed Order #{editingOrder.id}</h2>
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={() => setEditingOrder(null)}
+                style={{ fontSize: "16px", lineHeight: 1 }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSubmit}>
+              <div className="form-group">
+                <label>Customer Name *</label>
+                <input
+                  required
+                  value={editForm.customer_name ?? ""}
+                  onChange={(e) => setEditForm({ ...editForm, customer_name: e.target.value })}
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Phone Number</label>
+                <input
+                  value={editForm.phone ?? ""}
+                  onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Item Description *</label>
+                <input
+                  required
+                  value={editForm.item_desc ?? ""}
+                  onChange={(e) => setEditForm({ ...editForm, item_desc: e.target.value })}
+                />
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div className="form-group">
+                  <label>Quantity *</label>
+                  <input
+                    type="number"
+                    min={1}
+                    required
+                    value={editForm.qty ?? 1}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, qty: parseInt(e.target.value) || 1 })
+                    }
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Price (₹) *</label>
+                  <input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    required
+                    value={editForm.price ?? 0}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, price: parseFloat(e.target.value) || 0 })
+                    }
+                  />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label>Payment / Delivery Status</label>
+                <select
+                  value={editForm.payment_status ?? "Settled"}
+                  onChange={(e) => setEditForm({ ...editForm, payment_status: e.target.value })}
+                >
+                  <option value="Settled">Settled / Paid</option>
+                  <option value="Unpaid">Unpaid / Pending Payment</option>
+                  <option value="Partial">Partially Paid</option>
+                </select>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "20px" }}>
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  onClick={() => setEditingOrder(null)}
+                  disabled={editSubmitting}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary" disabled={editSubmitting}>
+                  {editSubmitting ? "Saving..." : "Save Changes"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </>
   );
 }

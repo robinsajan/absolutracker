@@ -73,7 +73,11 @@ export interface OrderCreate {
   qty?: number;
   price?: number;
   deadline?: string;
+  stage?: number;
+  payment_status?: string;
 }
+
+export type OrderUpdate = Partial<OrderCreate>;
 
 export function getOrders() {
   return request<Order[]>("/orders");
@@ -82,6 +86,13 @@ export function getOrders() {
 export function createOrder(data: OrderCreate) {
   return request<Order>("/orders", {
     method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export function updateOrder(id: number, data: OrderUpdate) {
+  return request<Order>(`/orders/${id}`, {
+    method: "PATCH",
     body: JSON.stringify(data),
   });
 }
@@ -117,8 +128,29 @@ export interface CompletedOrder {
   completed_at: string | null;
 }
 
+export type CompletedOrderUpdate = Partial<{
+  customer_name: string;
+  phone: string;
+  item_desc: string;
+  qty: number;
+  price: number;
+  deadline: string;
+  payment_status: string;
+}>;
+
 export function getCompleted() {
   return request<CompletedOrder[]>("/completed");
+}
+
+export function updateCompletedOrder(id: number, data: CompletedOrderUpdate) {
+  return request<CompletedOrder>(`/completed/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+export function deleteCompletedOrder(id: number) {
+  return request<{ detail: string }>(`/completed/${id}`, { method: "DELETE" });
 }
 
 // ── Waiting List ──
@@ -138,6 +170,8 @@ export interface WaitingCreate {
   notes?: string;
 }
 
+export type WaitingUpdate = Partial<WaitingCreate>;
+
 export function getWaiting() {
   return request<WaitingItem[]>("/waiting");
 }
@@ -145,6 +179,13 @@ export function getWaiting() {
 export function addWaiting(data: WaitingCreate) {
   return request<WaitingItem>("/waiting", {
     method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export function updateWaiting(id: number, data: WaitingUpdate) {
+  return request<WaitingItem>(`/waiting/${id}`, {
+    method: "PATCH",
     body: JSON.stringify(data),
   });
 }
@@ -175,6 +216,14 @@ export interface TodoCreate {
   notes?: string;
 }
 
+export type TodoUpdate = Partial<{
+  title: string;
+  category: string;
+  priority: string;
+  is_done: number;
+  notes: string;
+}>;
+
 export function getTodos() {
   return request<TodoItem[]>("/todos");
 }
@@ -182,6 +231,13 @@ export function getTodos() {
 export function addTodo(data: TodoCreate) {
   return request<TodoItem>("/todos", {
     method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export function updateTodo(id: number, data: TodoUpdate) {
+  return request<TodoItem>(`/todos/${id}`, {
+    method: "PATCH",
     body: JSON.stringify(data),
   });
 }
@@ -211,6 +267,8 @@ export interface ExpenseCreate {
   notes?: string;
 }
 
+export type ExpenseUpdate = Partial<ExpenseCreate>;
+
 export function getExpenses() {
   return request<Expense[]>("/expenses");
 }
@@ -218,6 +276,13 @@ export function getExpenses() {
 export function addExpense(data: ExpenseCreate) {
   return request<Expense>("/expenses", {
     method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export function updateExpense(id: number, data: ExpenseUpdate) {
+  return request<Expense>(`/expenses/${id}`, {
+    method: "PATCH",
     body: JSON.stringify(data),
   });
 }
@@ -275,6 +340,8 @@ export interface ProductCreate {
   price: number;
 }
 
+export type ProductUpdate = Partial<ProductCreate>;
+
 export function getProducts() {
   return request<Product[]>("/products");
 }
@@ -282,6 +349,13 @@ export function getProducts() {
 export function createProduct(data: ProductCreate) {
   return request<Product>("/products", {
     method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export function updateProduct(id: number, data: ProductUpdate) {
+  return request<Product>(`/products/${id}`, {
+    method: "PATCH",
     body: JSON.stringify(data),
   });
 }
@@ -313,6 +387,8 @@ export interface FilamentCreate {
   cost_per_kg?: number;
 }
 
+export type FilamentUpdate = Partial<FilamentCreate>;
+
 export function getFilaments() {
   return request<FilamentSpool[]>("/filaments");
 }
@@ -320,6 +396,13 @@ export function getFilaments() {
 export function createFilament(data: FilamentCreate) {
   return request<FilamentSpool>("/filaments", {
     method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export function updateFilament(id: number, data: FilamentUpdate) {
+  return request<FilamentSpool>(`/filaments/${id}`, {
+    method: "PATCH",
     body: JSON.stringify(data),
   });
 }

@@ -25,6 +25,17 @@ class OrderCreate(BaseModel):
     deadline: str = ""
 
 
+class OrderUpdate(BaseModel):
+    customer_name: Optional[str] = None
+    phone: Optional[str] = None
+    item_desc: Optional[str] = None
+    qty: Optional[int] = None
+    price: Optional[float] = None
+    stage: Optional[int] = None
+    deadline: Optional[str] = None
+    payment_status: Optional[str] = None
+
+
 class OrderOut(BaseModel):
     id: int
     customer_name: str
@@ -38,6 +49,16 @@ class OrderOut(BaseModel):
     created_at: Optional[datetime] = None
 
     model_config = {"from_attributes": True}
+
+
+class CompletedOrderUpdate(BaseModel):
+    customer_name: Optional[str] = None
+    phone: Optional[str] = None
+    item_desc: Optional[str] = None
+    qty: Optional[int] = None
+    price: Optional[float] = None
+    deadline: Optional[str] = None
+    payment_status: Optional[str] = None
 
 
 class CompletedOrderOut(BaseModel):
@@ -61,6 +82,13 @@ class WaitingCreate(BaseModel):
     phone: str = ""
     item_desc: str
     notes: str = ""
+
+
+class WaitingUpdate(BaseModel):
+    customer_name: Optional[str] = None
+    phone: Optional[str] = None
+    item_desc: Optional[str] = None
+    notes: Optional[str] = None
 
 
 class WaitingOut(BaseModel):
@@ -110,6 +138,13 @@ class ExpenseCreate(BaseModel):
     notes: str = ""
 
 
+class ExpenseUpdate(BaseModel):
+    amount: Optional[float] = None
+    category: Optional[str] = None
+    date: Optional[str] = None
+    notes: Optional[str] = None
+
+
 class ExpenseOut(BaseModel):
     id: int
     amount: float
@@ -150,6 +185,11 @@ class ProductCreate(BaseModel):
     price: float = 0.0
 
 
+class ProductUpdate(BaseModel):
+    name: Optional[str] = None
+    price: Optional[float] = None
+
+
 class ProductOut(BaseModel):
     id: int
     name: str
@@ -168,6 +208,16 @@ class FilamentCreate(BaseModel):
     remaining_grams: float = 1000.0
     total_grams: float = 1000.0
     cost_per_kg: float = 1200.0
+
+
+class FilamentUpdate(BaseModel):
+    name: Optional[str] = None
+    material: Optional[str] = None
+    color_name: Optional[str] = None
+    color_hex: Optional[str] = None
+    remaining_grams: Optional[float] = None
+    total_grams: Optional[float] = None
+    cost_per_kg: Optional[float] = None
 
 
 class FilamentDeduct(BaseModel):

@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { isLoggedIn } from "@/lib/auth";
-import { getExpenses, addExpense, deleteExpense, Expense, ExpenseCreate } from "@/lib/api";
+import { getExpenses, addExpense, updateExpense, deleteExpense, Expense, ExpenseCreate, ExpenseUpdate } from "@/lib/api";
 import Navbar from "@/components/Navbar";
 
 const CATEGORIES = [
@@ -33,6 +33,11 @@ export default function ExpensesPage() {
     notes: "",
   });
   const [submitting, setSubmitting] = useState(false);
+
+  // ── Edit State ──
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  const [editForm, setEditForm] = useState<ExpenseUpdate>({});
+  const [editSubmitting, setEditSubmitting] = useState(false);
 
   // ── Filters & Search ──
   const [showFilterPanel, setShowFilterPanel] = useState(false);
@@ -80,6 +85,31 @@ export default function ExpensesPage() {
       alert(err instanceof Error ? err.message : "Failed");
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  function startEdit(exp: Expense) {
+    setEditingExpense(exp);
+    setEditForm({
+      amount: exp.amount,
+      category: exp.category,
+      date: exp.date,
+      notes: exp.notes,
+    });
+  }
+
+  async function handleEditSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingExpense) return;
+    setEditSubmitting(true);
+    try {
+      const updated = await updateExpense(editingExpense.id, editForm);
+      setExpenses((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+      setEditingExpense(null);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to update expense");
+    } finally {
+      setEditSubmitting(false);
     }
   }
 
@@ -533,7 +563,16 @@ export default function ExpensesPage() {
                       >
                         ₹{exp.amount.toLocaleString("en-IN")}
                       </td>
-                      <td style={{ textAlign: "right" }}>
+                      <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-sm"
+                          onClick={() => startEdit(exp)}
+                          style={{ color: "var(--primary)", marginRight: "6px" }}
+                          title="Edit expense entry"
+                        >
+                          Edit
+                        </button>
                         <button
                           type="button"
                           className="btn btn-ghost btn-sm"
@@ -552,6 +591,119 @@ export default function ExpensesPage() {
           )}
         </div>
       </main>
+
+      {/* Edit Modal */}
+      {editingExpense && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0, 0, 0, 0.65)",
+            backdropFilter: "blur(6px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            padding: "16px",
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setEditingExpense(null);
+          }}
+        >
+          <div
+            className="card"
+            style={{
+              width: "100%",
+              maxWidth: "480px",
+              boxShadow: "0 20px 40px rgba(0,0,0,0.4)",
+              border: "1px solid var(--outline-light)",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: "20px",
+              }}
+            >
+              <h2 style={{ fontSize: "17px", fontWeight: 700 }}>Edit Expense</h2>
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={() => setEditingExpense(null)}
+                style={{ fontSize: "16px", lineHeight: 1 }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSubmit}>
+              <div className="form-group">
+                <label>Amount (₹) *</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  required
+                  value={editForm.amount ?? 0}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, amount: parseFloat(e.target.value) || 0 })
+                  }
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Category *</label>
+                <select
+                  required
+                  value={editForm.category ?? CATEGORIES[0]}
+                  onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
+                >
+                  {CATEGORIES.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>Date *</label>
+                <input
+                  type="date"
+                  required
+                  value={editForm.date ?? ""}
+                  onChange={(e) => setEditForm({ ...editForm, date: e.target.value })}
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Notes / Description</label>
+                <textarea
+                  rows={3}
+                  value={editForm.notes ?? ""}
+                  onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
+                  placeholder="Additional notes..."
+                />
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "20px" }}>
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  onClick={() => setEditingExpense(null)}
+                  disabled={editSubmitting}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary" disabled={editSubmitting}>
+                  {editSubmitting ? "Saving..." : "Save Changes"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </>
   );
 }

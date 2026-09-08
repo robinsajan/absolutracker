@@ -17,14 +17,14 @@ from database import get_db, init_db, SessionLocal
 from models import Order, CompletedOrder, WaitingItem, TodoItem, Expense, FormulaConfig, Product, FilamentSpool
 from schemas import (
     LoginRequest, LoginResponse,
-    OrderCreate, OrderOut, CompletedOrderOut,
-    WaitingCreate, WaitingOut,
+    OrderCreate, OrderUpdate, OrderOut, CompletedOrderUpdate, CompletedOrderOut,
+    WaitingCreate, WaitingUpdate, WaitingOut,
     TodoCreate, TodoUpdate, TodoOut,
-    ExpenseCreate, ExpenseOut,
+    ExpenseCreate, ExpenseUpdate, ExpenseOut,
     DashboardStats,
     FormulaConfigSchema,
-    ProductCreate, ProductOut,
-    FilamentCreate, FilamentDeduct, FilamentOut,
+    ProductCreate, ProductUpdate, ProductOut,
+    FilamentCreate, FilamentUpdate, FilamentDeduct, FilamentOut,
 )
 
 @asynccontextmanager
@@ -166,6 +166,20 @@ def complete_order(order_id: int, db: Session = Depends(get_db)):
     return completed
 
 
+@app.put("/orders/{order_id}", response_model=OrderOut)
+@app.patch("/orders/{order_id}", response_model=OrderOut)
+def update_order(order_id: int, payload: OrderUpdate, db: Session = Depends(get_db)):
+    order = db.query(Order).filter(Order.id == order_id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    data = payload.model_dump(exclude_unset=True)
+    for key, value in data.items():
+        setattr(order, key, value)
+    db.commit()
+    db.refresh(order)
+    return order
+
+
 @app.delete("/orders/{order_id}")
 def delete_order(order_id: int, db: Session = Depends(get_db)):
     order = db.query(Order).filter(Order.id == order_id).first()
@@ -184,6 +198,30 @@ def get_completed(db: Session = Depends(get_db)):
     return db.query(CompletedOrder).order_by(CompletedOrder.completed_at.desc()).all()
 
 
+@app.put("/completed/{order_id}", response_model=CompletedOrderOut)
+@app.patch("/completed/{order_id}", response_model=CompletedOrderOut)
+def update_completed(order_id: int, payload: CompletedOrderUpdate, db: Session = Depends(get_db)):
+    completed = db.query(CompletedOrder).filter(CompletedOrder.id == order_id).first()
+    if not completed:
+        raise HTTPException(status_code=404, detail="Completed order not found")
+    data = payload.model_dump(exclude_unset=True)
+    for key, value in data.items():
+        setattr(completed, key, value)
+    db.commit()
+    db.refresh(completed)
+    return completed
+
+
+@app.delete("/completed/{order_id}")
+def delete_completed(order_id: int, db: Session = Depends(get_db)):
+    completed = db.query(CompletedOrder).filter(CompletedOrder.id == order_id).first()
+    if not completed:
+        raise HTTPException(status_code=404, detail="Completed order not found")
+    db.delete(completed)
+    db.commit()
+    return {"detail": "deleted"}
+
+
 # ──────────────────────────── WAITING LIST ────────────────────────────
 
 
@@ -199,6 +237,20 @@ def add_waiting(item: WaitingCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(db_item)
     return db_item
+
+
+@app.put("/waiting/{item_id}", response_model=WaitingOut)
+@app.patch("/waiting/{item_id}", response_model=WaitingOut)
+def update_waiting(item_id: int, payload: WaitingUpdate, db: Session = Depends(get_db)):
+    item = db.query(WaitingItem).filter(WaitingItem.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+    data = payload.model_dump(exclude_unset=True)
+    for key, value in data.items():
+        setattr(item, key, value)
+    db.commit()
+    db.refresh(item)
+    return item
 
 
 @app.delete("/waiting/{item_id}")
@@ -260,6 +312,20 @@ def toggle_todo(todo_id: int, db: Session = Depends(get_db)):
     return item
 
 
+@app.put("/todos/{todo_id}", response_model=TodoOut)
+@app.patch("/todos/{todo_id}", response_model=TodoOut)
+def update_todo(todo_id: int, payload: TodoUpdate, db: Session = Depends(get_db)):
+    item = db.query(TodoItem).filter(TodoItem.id == todo_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Todo not found")
+    data = payload.model_dump(exclude_unset=True)
+    for key, value in data.items():
+        setattr(item, key, value)
+    db.commit()
+    db.refresh(item)
+    return item
+
+
 @app.delete("/todos/{todo_id}")
 def delete_todo(todo_id: int, db: Session = Depends(get_db)):
     item = db.query(TodoItem).filter(TodoItem.id == todo_id).first()
@@ -285,6 +351,20 @@ def add_expense(exp: ExpenseCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(db_exp)
     return db_exp
+
+
+@app.put("/expenses/{expense_id}", response_model=ExpenseOut)
+@app.patch("/expenses/{expense_id}", response_model=ExpenseOut)
+def update_expense(expense_id: int, payload: ExpenseUpdate, db: Session = Depends(get_db)):
+    exp = db.query(Expense).filter(Expense.id == expense_id).first()
+    if not exp:
+        raise HTTPException(status_code=404, detail="Expense not found")
+    data = payload.model_dump(exclude_unset=True)
+    for key, value in data.items():
+        setattr(exp, key, value)
+    db.commit()
+    db.refresh(exp)
+    return exp
 
 
 @app.delete("/expenses/{expense_id}")
@@ -362,6 +442,20 @@ def create_product(prod: ProductCreate, db: Session = Depends(get_db)):
     return db_prod
 
 
+@app.put("/products/{product_id}", response_model=ProductOut)
+@app.patch("/products/{product_id}", response_model=ProductOut)
+def update_product(product_id: int, payload: ProductUpdate, db: Session = Depends(get_db)):
+    prod = db.query(Product).filter(Product.id == product_id).first()
+    if not prod:
+        raise HTTPException(status_code=404, detail="Product not found")
+    data = payload.model_dump(exclude_unset=True)
+    for key, value in data.items():
+        setattr(prod, key, value)
+    db.commit()
+    db.refresh(prod)
+    return prod
+
+
 @app.delete("/products/{product_id}")
 def delete_product(product_id: int, db: Session = Depends(get_db)):
     prod = db.query(Product).filter(Product.id == product_id).first()
@@ -397,6 +491,20 @@ def create_filament(spool: FilamentCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(db_spool)
     return db_spool
+
+
+@app.put("/filaments/{spool_id}", response_model=FilamentOut)
+@app.patch("/filaments/{spool_id}", response_model=FilamentOut)
+def update_filament(spool_id: int, payload: FilamentUpdate, db: Session = Depends(get_db)):
+    spool = db.query(FilamentSpool).filter(FilamentSpool.id == spool_id).first()
+    if not spool:
+        raise HTTPException(status_code=404, detail="Filament spool not found")
+    data = payload.model_dump(exclude_unset=True)
+    for key, value in data.items():
+        setattr(spool, key, value)
+    db.commit()
+    db.refresh(spool)
+    return spool
 
 
 @app.post("/filaments/{spool_id}/deduct", response_model=FilamentOut)

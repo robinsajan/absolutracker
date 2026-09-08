@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { isLoggedIn } from "@/lib/auth";
-import { getProducts, createProduct, deleteProduct, Product } from "@/lib/api";
+import { getProducts, createProduct, updateProduct, deleteProduct, Product, ProductUpdate } from "@/lib/api";
 import Navbar from "@/components/Navbar";
 
 export default function ProductsPage() {
@@ -15,6 +15,11 @@ export default function ProductsPage() {
   const [price, setPrice] = useState<number | "">("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+
+  // ── Edit State ──
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [editForm, setEditForm] = useState<ProductUpdate>({});
+  const [editSubmitting, setEditSubmitting] = useState(false);
 
   // ── Filters & Sort ──
   const [showFilterPanel, setShowFilterPanel] = useState(false);
@@ -61,6 +66,29 @@ export default function ProductsPage() {
       else setError("Failed to add product");
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  function startEdit(prod: Product) {
+    setEditingProduct(prod);
+    setEditForm({
+      name: prod.name,
+      price: prod.price,
+    });
+  }
+
+  async function handleEditSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingProduct) return;
+    setEditSubmitting(true);
+    try {
+      const updated = await updateProduct(editingProduct.id, editForm);
+      setProducts((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+      setEditingProduct(null);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to update product");
+    } finally {
+      setEditSubmitting(false);
     }
   }
 
@@ -355,7 +383,16 @@ export default function ProductsPage() {
                       >
                         ₹{p.price.toLocaleString("en-IN")}
                       </td>
-                      <td style={{ textAlign: "right" }}>
+                      <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-sm"
+                          onClick={() => startEdit(p)}
+                          style={{ color: "var(--primary)", marginRight: "6px" }}
+                          title="Edit product"
+                        >
+                          Edit
+                        </button>
                         <button
                           type="button"
                           className="btn btn-ghost btn-sm"
@@ -374,6 +411,94 @@ export default function ProductsPage() {
           )}
         </div>
       </main>
+
+      {/* Edit Product Modal */}
+      {editingProduct && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0, 0, 0, 0.65)",
+            backdropFilter: "blur(6px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            padding: "16px",
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setEditingProduct(null);
+          }}
+        >
+          <div
+            className="card"
+            style={{
+              width: "100%",
+              maxWidth: "460px",
+              boxShadow: "0 20px 40px rgba(0,0,0,0.4)",
+              border: "1px solid var(--outline-light)",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: "20px",
+              }}
+            >
+              <h2 style={{ fontSize: "17px", fontWeight: 700 }}>Edit Product #{editingProduct.id}</h2>
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={() => setEditingProduct(null)}
+                style={{ fontSize: "16px", lineHeight: 1 }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSubmit}>
+              <div className="form-group">
+                <label>Product Name *</label>
+                <input
+                  required
+                  value={editForm.name ?? ""}
+                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Base Price (₹) *</label>
+                <input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  required
+                  value={editForm.price ?? 0}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, price: parseFloat(e.target.value) || 0 })
+                  }
+                />
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "20px" }}>
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  onClick={() => setEditingProduct(null)}
+                  disabled={editSubmitting}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary" disabled={editSubmitting}>
+                  {editSubmitting ? "Saving..." : "Save Changes"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </>
   );
 }

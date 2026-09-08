@@ -6,10 +6,12 @@ import { isLoggedIn } from "@/lib/auth";
 import {
   getFilaments,
   createFilament,
+  updateFilament,
   deductFilament,
   deleteFilament,
   FilamentSpool,
   FilamentCreate,
+  FilamentUpdate,
 } from "@/lib/api";
 import Navbar from "@/components/Navbar";
 
@@ -36,6 +38,11 @@ export default function FilamentsPage() {
     total_grams: 1000,
     cost_per_kg: 0,
   });
+
+  // Edit Spool Modal State
+  const [editingSpool, setEditingSpool] = useState<FilamentSpool | null>(null);
+  const [editForm, setEditForm] = useState<FilamentUpdate>({});
+  const [editSubmitting, setEditSubmitting] = useState(false);
 
   // Deduct Modal State
   const [deductSpool, setDeductSpool] = useState<FilamentSpool | null>(null);
@@ -93,6 +100,34 @@ export default function FilamentsPage() {
       fetchSpools();
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to deduct filament");
+    }
+  }
+
+  function startEditSpool(spool: FilamentSpool) {
+    setEditingSpool(spool);
+    setEditForm({
+      name: spool.name,
+      material: spool.material,
+      color_name: spool.color_name,
+      color_hex: spool.color_hex,
+      remaining_grams: spool.remaining_grams,
+      total_grams: spool.total_grams,
+      cost_per_kg: spool.cost_per_kg,
+    });
+  }
+
+  async function handleEditSpoolSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingSpool) return;
+    setEditSubmitting(true);
+    try {
+      await updateFilament(editingSpool.id, editForm);
+      setEditingSpool(null);
+      fetchSpools();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to update filament spool");
+    } finally {
+      setEditSubmitting(false);
     }
   }
 
@@ -544,6 +579,15 @@ export default function FilamentsPage() {
                       </button>
                       <button
                         type="button"
+                        onClick={() => startEditSpool(spool)}
+                        className="btn btn-ghost btn-sm"
+                        style={{ color: "var(--primary)" }}
+                        title="Edit spool"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => handleDeleteSpool(spool.id)}
                         className="btn btn-ghost btn-sm"
                         style={{ color: "var(--rose)" }}
@@ -755,6 +799,140 @@ export default function FilamentsPage() {
                     </button>
                     <button type="submit" className="btn btn-danger">
                       Deduct {deductGrams}g
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* Modal: Edit Spool */}
+          {editingSpool && (
+            <div className="modal-overlay" onClick={() => setEditingSpool(null)}>
+              <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                <div className="modal-header">
+                  <h2 className="modal-title">Edit Filament Spool</h2>
+                  <button
+                    type="button"
+                    onClick={() => setEditingSpool(null)}
+                    className="modal-close"
+                  >
+                    ×
+                  </button>
+                </div>
+
+                <form onSubmit={handleEditSpoolSubmit} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                  <div className="form-group">
+                    <label>Spool Name / Brand</label>
+                    <input
+                      required
+                      value={editForm.name ?? ""}
+                      onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                    />
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                    <div className="form-group">
+                      <label>Material</label>
+                      <select
+                        value={editForm.material ?? "PLA"}
+                        onChange={(e) => setEditForm({ ...editForm, material: e.target.value })}
+                      >
+                        <option value="PLA">PLA</option>
+                        <option value="PLA+">PLA+</option>
+                        <option value="PETG">PETG</option>
+                        <option value="ABS">ABS</option>
+                        <option value="ASA">ASA</option>
+                        <option value="TPU">TPU</option>
+                        <option value="PC">Polycarbonate</option>
+                        <option value="Nylon">Nylon</option>
+                      </select>
+                    </div>
+
+                    <div className="form-group">
+                      <label>Color Name</label>
+                      <input
+                        value={editForm.color_name ?? ""}
+                        onChange={(e) => setEditForm({ ...editForm, color_name: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label>Color Swatch</label>
+                    <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                      <input
+                        type="color"
+                        value={editForm.color_hex ?? "#7c3aed"}
+                        onChange={(e) => setEditForm({ ...editForm, color_hex: e.target.value })}
+                        style={{
+                          width: "44px",
+                          height: "38px",
+                          padding: "2px",
+                          borderRadius: "var(--radius-sm)",
+                          cursor: "pointer",
+                        }}
+                      />
+                      <input
+                        value={editForm.color_hex ?? ""}
+                        onChange={(e) => setEditForm({ ...editForm, color_hex: e.target.value })}
+                        style={{ flex: 1 }}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                    <div className="form-group">
+                      <label>Remaining Weight (g)</label>
+                      <input
+                        type="number"
+                        min={0}
+                        step="1"
+                        value={editForm.remaining_grams ?? 0}
+                        onChange={(e) =>
+                          setEditForm({ ...editForm, remaining_grams: parseFloat(e.target.value) || 0 })
+                        }
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label>Full Spool Weight (g)</label>
+                      <input
+                        type="number"
+                        min={1}
+                        step="1"
+                        value={editForm.total_grams ?? 1000}
+                        onChange={(e) =>
+                          setEditForm({ ...editForm, total_grams: parseFloat(e.target.value) || 0 })
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label>Cost per kg (₹)</label>
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={editForm.cost_per_kg ?? 0}
+                      onChange={(e) =>
+                        setEditForm({ ...editForm, cost_per_kg: parseFloat(e.target.value) || 0 })
+                      }
+                    />
+                  </div>
+
+                  <div className="form-actions">
+                    <button
+                      type="button"
+                      onClick={() => setEditingSpool(null)}
+                      className="btn btn-outline"
+                      disabled={editSubmitting}
+                    >
+                      Cancel
+                    </button>
+                    <button type="submit" className="btn btn-primary" disabled={editSubmitting}>
+                      {editSubmitting ? "Saving..." : "Save Spool"}
                     </button>
                   </div>
                 </form>
